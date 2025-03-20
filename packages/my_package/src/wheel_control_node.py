@@ -70,15 +70,18 @@ class WheelControlNode(DTROS):
                 self._vel_left = THROTTLE_LEFT * FORWARD
                 self._vel_right = THROTTLE_RIGHT * FORWARD
                 self._cnt += 1
+                msg = f"Wheel encoder ticks LEFT, RIGHT: {self._ticks_left}, {self._ticks_right}"
             else:
                 self._prev_left_ticks = self._ticks_left
                 self._prev_right_ticks = self._ticks_right
-                while abs(self._prev_left_ticks -  self._ticks_left) >= 135:
-                    
+                while abs(self._prev_left_ticks -  self._ticks_left) < 600:
+                    msg = f"While"
                     self._vel_left = THROTTLE_LEFT * FORWARD * 0.5
                     self._vel_right = 0
+                    # rospy.loginfo(msg)
+                    message = WheelsCmdStamped(vel_left=self._vel_left, vel_right=self._vel_right)
+                    self._publisher.publish(message)
                 self._cnt = 0
-            msg = f"Wheel encoder ticks {LEFT}, {RIGHT}: {self._ticks_left}, {self._ticks_right}"
             rospy.loginfo(msg)
             rate.sleep()
 
