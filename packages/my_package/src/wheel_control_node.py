@@ -59,29 +59,36 @@ class WheelControlNode(DTROS):
         self._ticks_right = data.data
 
     def run(self):
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(100)
 
-        while not rospy.is_shutdown():
-            message = WheelsCmdStamped(vel_left=self._vel_left, vel_right=self._vel_right)
-            self._publisher.publish(message)
-            
-            if self._cnt < 10:
-
+        while not rospy.is_shutdown():            
+            if self._cnt < 100:
                 self._vel_left = THROTTLE_LEFT * FORWARD
                 self._vel_right = THROTTLE_RIGHT * FORWARD
                 self._cnt += 1
                 msg = f"Wheel encoder ticks LEFT, RIGHT: {self._ticks_left}, {self._ticks_right}"
-            else:
+                
+            elif self._cnt < 150:
+                self._vel_left = 0
+                self._vel_right = 0
+                self._cnt += 1
+    
                 self._prev_left_ticks = self._ticks_left
                 self._prev_right_ticks = self._ticks_right
-                while abs(self._prev_left_ticks -  self._ticks_left) < 600:
-                    msg = f"While"
-                    self._vel_left = THROTTLE_LEFT * FORWARD * 0.5
-                    self._vel_right = 0
-                    # rospy.loginfo(msg)
-                    message = WheelsCmdStamped(vel_left=self._vel_left, vel_right=self._vel_right)
-                    self._publisher.publish(message)
-                self._cnt = 0
+            else:
+                self._vel_left = THROTTLE_LEFT * FORWARD * 0.5
+                self._vel_right = THROTTLE_RIGHT * BACKWARD * 0.5
+
+                if self._ticks_left is not None and self._ticks_right is not None:
+                    if(abs(self._prev_left_ticks - self._ticks_left) < round(730 / 4)):
+                        msg = f"Wheel encoder ticks LEFT_PREV, LEFT, DIFF: {self._prev_left_ticks}, {self._ticks_left}, {(abs(self._prev_left_ticks - self._ticks_left))}"
+                    else:
+                        self._cnt = 0
+                else:
+                    self._cnt = 0
+
+            message = WheelsCmdStamped(vel_left=self._vel_left, vel_right=self._vel_right)
+            self._publisher.publish(message)
             rospy.loginfo(msg)
             rate.sleep()
 
@@ -89,6 +96,9 @@ class WheelControlNode(DTROS):
         # Stop the wheels when the node shuts down
         stop = WheelsCmdStamped(vel_left=0, vel_right=0)
         self._publisher.publish(stop)
+        self.sub_left.unregister()
+        self.sub_right.unregister()
+
 
 if __name__ == "__main__":
     node_wheel_control = WheelControlNode(node_name='wheel_control_node')
