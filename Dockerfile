@@ -1,7 +1,7 @@
 # parameters
-ARG REPO_NAME="MY_ROS_PROJECT"
-ARG DESCRIPTION="DUMMY"
-ARG MAINTAINER="FILIP DYMCZYK"
+ARG REPO_NAME="Lab4_Duckiebot"
+ARG DESCRIPTION="My first DTProject for Duckietown"
+ARG MAINTAINER="GallinaJan <jan.gallina@interia.pl>"
 # pick an icon from: https://fontawesome.com/v4.7.0/icons/
 ARG ICON="cube"
 
