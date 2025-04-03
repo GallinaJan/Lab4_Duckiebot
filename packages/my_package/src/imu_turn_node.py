@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import rospy
 from std_msgs.msg import String
@@ -33,7 +34,10 @@ class IMUTurnNode(DTROS):
         self.target_angle = 90.0
         self.current_angle = 0.0
         self.previous_time = None
-        self.turning = True
+        self.turning_left = False
+        self.driving_forward = False
+        self.count = 0
+        self.sequences = 10
 
         # construct publisher
         self.publisher = rospy.Publisher(wheels_topic, WheelsCmdStamped, queue_size=1)
@@ -49,7 +53,9 @@ class IMUTurnNode(DTROS):
         # # Construct subscribers
         # self.sub_left = rospy.Subscriber(self._left_encoder_topic, WheelEncoderStamped, self.callback_left)
         # self.sub_right = rospy.Subscriber(self._right_encoder_topic, WheelEncoderStamped, self.callback_right)
-        self.sub_imu = rospy.Subscriber(self.imu_topic, Imu, self.callback_imu)
+        
+        self.sub_imu = rospy.Subscriber(imu_topic, Imu, self.callback_imu)
+        # self.sub_imu = rospy.Subscriber(self.imu_topic, Imu, self.callback_imu)
 
 
     # def callback_left(self, data):
@@ -69,7 +75,7 @@ class IMUTurnNode(DTROS):
     #     self._ticks_right = data.data
 
     def callback_imu(self, data):
-        if not self.turning:
+        if not self.turning_left:
             return
         current_time = rospy.Time.now()
         if self.previous_time is None:
@@ -84,16 +90,39 @@ class IMUTurnNode(DTROS):
 
         rospy.loginfo(f"Kąt obrotu: {self.current_angle:.2f}°")
 
-        if abs(self.current_angle) >= self.target_angle:
+        if abs(self.current_angle) >= self.target_angle*0.95:
             rospy.loginfo("Osiągnięto 90 stopni! Zatrzymanie.")
             self.stop_robot()
-            self.turning = False
+            self.turning_left = False
+            rospy.sleep(1)
+            self.forward()
     
-    def turn_robot(self, speed = 0.3):
+    def turn_left(self, speed = 0.15):
+        self.turning_left = True
+        self.current_angle = 0.0
+        self.previous_time = rospy.Time.now()
+
+        msg = WheelsCmdStamped()
+        msg.vel_left = -speed
+        msg.vel_right = speed
+        self.publisher.publish(msg)
+
+    def forward(self, speed = 0.5, duration = 3):
+        self.driving_forward = True
+
         msg = WheelsCmdStamped()
         msg.vel_left = speed
         msg.vel_right = speed
         self.publisher.publish(msg)
+        rospy.sleep(duration)
+        self.stop_robot()
+        self.count += 1
+        if self.count >= self.sequences:
+            rospy.loginfo("Oto kwadrat")
+            rospy.signal_shutdown("koniec zadania")
+        else:
+            rospy.sleep(1)
+            self.turn_left()
 
     def stop_robot(self):
         msg = WheelsCmdStamped()
@@ -134,16 +163,22 @@ class IMUTurnNode(DTROS):
         #     self._publisher.publish(message)
         #     rospy.loginfo(msg)
         #     rate.sleep()
-        rospy.sleep(1)  # Poczekaj na inicjalizację IMU
-        self.turn_robot()
+        rospy.sleep(5)  # Poczekaj na inicjalizację IMU
+        self.current_angle = 0.0
+        self.forward()
         rospy.spin()  # Utrzymuje działanie węzła
 
     def on_shutdown(self):
-        # Stop the wheels when the node shuts down
-        stop = WheelsCmdStamped(vel_left=0, vel_right=0)
-        self._publisher.publish(stop)
-        self.sub_left.unregister()
-        self.sub_right.unregister()
+        # # Stop the wheels when the node shuts down
+        # stop = WheelsCmdStamped(vel_left=0, vel_right=0)
+        # self.publisher.publish(stop)
+        # self.sub_left.unregister()
+        # self.sub_right.unregister()
+        msg = WheelsCmdStamped()
+        msg.vel_left = 0
+        msg.vel_right = 0
+        self.publisher.publish(msg)
+
 
 
 if __name__ == "__main__":
