@@ -97,14 +97,14 @@ class IMUTurnNode(DTROS):
             rospy.sleep(1)
             self.forward()
     
-    def turn_left(self, speed = 0.15):
+    def turn_right(self, speed = 0.15):
         self.turning_left = True
         self.current_angle = 0.0
         self.previous_time = rospy.Time.now()
 
         msg = WheelsCmdStamped()
-        msg.vel_left = -speed
-        msg.vel_right = speed
+        msg.vel_left = speed
+        msg.vel_right = -speed
         self.publisher.publish(msg)
 
     def forward(self, speed = 0.5, duration = 3):
@@ -122,7 +122,7 @@ class IMUTurnNode(DTROS):
             rospy.signal_shutdown("koniec zadania")
         else:
             rospy.sleep(1)
-            self.turn_left()
+            self.turn_right()
 
     def stop_robot(self):
         msg = WheelsCmdStamped()
